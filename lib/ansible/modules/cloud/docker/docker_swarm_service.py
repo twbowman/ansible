@@ -622,7 +622,9 @@ options:
         type: int
   state:
     description:
-      - Service state.
+      - I(absent) - A service matching the specified name will be removed and have its tasks stopped.
+      - I(present) - Asserts the existence of a service matching the name and provided configuration parameters.
+        Unspecified configuration parameters will be set to docker defaults.
     type: str
     required: yes
     default: present
@@ -1815,31 +1817,47 @@ class DockerService(DockerBaseClass):
         if self.configs is not None:
             configs = []
             for config_config in self.configs:
-                configs.append(
-                    types.ConfigReference(
-                        config_id=config_config['config_id'],
-                        config_name=config_config['config_name'],
-                        filename=config_config.get('filename'),
-                        uid=config_config.get('uid'),
-                        gid=config_config.get('gid'),
-                        mode=config_config.get('mode')
-                    )
-                )
+                config_args = {
+                    'config_id': config_config['config_id'],
+                    'config_name': config_config['config_name']
+                }
+                filename = config_config.get('filename')
+                if filename:
+                    config_args['filename'] = filename
+                uid = config_config.get('uid')
+                if uid:
+                    config_args['uid'] = uid
+                gid = config_config.get('gid')
+                if gid:
+                    config_args['gid'] = gid
+                mode = config_config.get('mode')
+                if mode:
+                    config_args['mode'] = mode
+
+                configs.append(types.ConfigReference(**config_args))
 
         secrets = None
         if self.secrets is not None:
             secrets = []
             for secret_config in self.secrets:
-                secrets.append(
-                    types.SecretReference(
-                        secret_id=secret_config['secret_id'],
-                        secret_name=secret_config['secret_name'],
-                        filename=secret_config.get('filename'),
-                        uid=secret_config.get('uid'),
-                        gid=secret_config.get('gid'),
-                        mode=secret_config.get('mode')
-                    )
-                )
+                secret_args = {
+                    'secret_id': secret_config['secret_id'],
+                    'secret_name': secret_config['secret_name']
+                }
+                filename = secret_config.get('filename')
+                if filename:
+                    secret_args['filename'] = filename
+                uid = secret_config.get('uid')
+                if uid:
+                    secret_args['uid'] = uid
+                gid = secret_config.get('gid')
+                if gid:
+                    secret_args['gid'] = gid
+                mode = secret_config.get('mode')
+                if mode:
+                    secret_args['mode'] = mode
+
+                secrets.append(types.SecretReference(**secret_args))
 
         dns_config_args = {}
         if self.dns is not None:

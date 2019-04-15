@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 
-set -ex
+set -eux
 
-virtualenv --system-site-packages --python "${ANSIBLE_TEST_PYTHON_INTERPRETER:-python}" "${OUTPUT_DIR}/aws-ec2-inventory"
-source "${OUTPUT_DIR}/aws-ec2-inventory/bin/activate"
-pip install "python-dateutil>=2.1,<2.7.0" jmespath "Jinja2>=2.10" PyYaml cryptography paramiko
+source virtualenv.sh
+
+pip install "python-dateutil>=2.1,<2.7.0" jmespath "Jinja2>=2.10"
 
 # create boto3 symlinks
 ln -s "$(pwd)/lib/boto" "$(pwd)/lib/boto3"
@@ -87,8 +87,8 @@ compose:
   ec2_placement: placement['availability_zone']
   ec2_ramdisk: ramdisk_id | default("")
   ec2_reason: state_transition_reason
-  ec2_security_group_ids: security_groups | map(attribute='group_id') | list |  join(',')
-  ec2_security_group_names: security_groups | map(attribute='group_name') | list |  join(',')
+  ec2_security_group_ids: security_groups | map(attribute='group_id') | list | sort | join(',')
+  ec2_security_group_names: security_groups | map(attribute='group_name') | list | sort | join(',')
   ec2_state: state['name']
   ec2_state_code: state['code']
   ec2_state_reason: state_reason['message'] if state_reason is defined else ""

@@ -179,7 +179,7 @@ class InstanceBase(object):
     def __init__(self, stopped=False):
         # set common ignored attribute to make sure instances have identical tags and security groups
         self._ignore_security_groups = {
-            'sg-0e1d2bd02b45b712e': 'sgname-with-hyphens',
+            'sg-0e1d2bd02b45b712e': 'a-sgname-with-hyphens',
             'sg-ae5c262eb5c4d712e': 'name@with?invalid!chars'
         }
         self._ignore_tags = {
@@ -245,7 +245,7 @@ class BotoInstance(InstanceBase):
         self.dns_name = 'ec2-12-3-456-78.compute-1.amazonaws.com'
         self.eventsSet = None
         self.group_name = None
-        self.groups = [SecurityGroup(k, v) for k, v in self._ignore_security_groups.items()]
+        self.groups = [SecurityGroup(k, v) for k, v in sorted(self._ignore_security_groups.items())]
         self.id = instance_id
         self.instance_profile = {
             'arn': 'arn:aws:iam::{0}:instance-profile/developer'.format(owner_id),
