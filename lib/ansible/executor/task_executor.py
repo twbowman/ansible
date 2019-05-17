@@ -17,6 +17,7 @@ import traceback
 from ansible import constants as C
 from ansible.errors import AnsibleError, AnsibleParserError, AnsibleUndefinedVariable, AnsibleConnectionFailure, AnsibleActionFail, AnsibleActionSkip
 from ansible.executor.task_result import TaskResult
+from ansible.executor.module_common import get_action_args_with_defaults
 from ansible.module_utils.six import iteritems, string_types, binary_type
 from ansible.module_utils.six.moves import xrange
 from ansible.module_utils._text import to_text, to_native
@@ -299,7 +300,7 @@ class TaskExecutor:
             loop_pause = templar.template(self._task.loop_control.pause)
             extended = templar.template(self._task.loop_control.extended)
 
-            # This may be 'None',so it is tempalted below after we ensure a value and an item is assigned
+            # This may be 'None',so it is templated below after we ensure a value and an item is assigned
             label = self._task.loop_control.label
 
         # ensure we always have a label
@@ -599,21 +600,7 @@ class TaskExecutor:
         self._handler = self._get_action_handler(connection=self._connection, templar=templar)
 
         # Apply default params for action/module, if present
-        # These are collected as a list of dicts, so we need to merge them
-        module_defaults = {}
-        for default in self._task.module_defaults:
-            module_defaults.update(default)
-        if module_defaults:
-            module_defaults = templar.template(module_defaults)
-        if self._task.action in module_defaults:
-            tmp_args = module_defaults[self._task.action].copy()
-            tmp_args.update(self._task.args)
-            self._task.args = tmp_args
-        if self._task.action in C.config.module_defaults_groups:
-            for group in C.config.module_defaults_groups.get(self._task.action, []):
-                tmp_args = (module_defaults.get('group/{0}'.format(group)) or {}).copy()
-                tmp_args.update(self._task.args)
-                self._task.args = tmp_args
+        self._task.args = get_action_args_with_defaults(self._task.action, self._task.args, self._task.module_defaults, templar)
 
         # And filter out any fields which were set to default(omit), and got the omit token value
         omit_token = variables.get('omit')
@@ -692,9 +679,10 @@ class TaskExecutor:
                     vars_copy.update(result['ansible_facts'])
                 else:
                     # TODO: cleaning of facts should eventually become part of taskresults instead of vars
-                    vars_copy.update(namespace_facts(result['ansible_facts']))
+                    af = wrap_var(result['ansible_facts'])
+                    vars_copy.update(namespace_facts(af))
                     if C.INJECT_FACTS_AS_VARS:
-                        vars_copy.update(clean_facts(result['ansible_facts']))
+                        vars_copy.update(clean_facts(af))
 
             # set the failed property if it was missing.
             if 'failed' not in result:
@@ -754,9 +742,10 @@ class TaskExecutor:
                 variables.update(result['ansible_facts'])
             else:
                 # TODO: cleaning of facts should eventually become part of taskresults instead of vars
-                variables.update(namespace_facts(result['ansible_facts']))
+                af = wrap_var(result['ansible_facts'])
+                variables.update(namespace_facts(af))
                 if C.INJECT_FACTS_AS_VARS:
-                    variables.update(clean_facts(result['ansible_facts']))
+                    variables.update(clean_facts(af))
 
         # save the notification target in the result, if it was specified, as
         # this task may be running in a loop in which case the notification
